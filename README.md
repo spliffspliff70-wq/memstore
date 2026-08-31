@@ -140,9 +140,11 @@ Cursor, Cline, OpenCode, Gemini CLI, Codex CLI, Kimi CLI, OpenClaw, Hermes.
 
 Python 3.11+, Windows/Linux/macOS. That's the whole dependency list.
 
+Buy on Lemon Squeezy, download the zip from your receipt page, then:
+
 ```powershell
-Expand-Archive memstore_v5.3.0.zip -DestinationPath C:\MemStore
-python C:\MemStore\install.py
+Expand-Archive memstore_v1.0.0.zip -DestinationPath C:\MemStore
+python C:\MemStore\memstore_v2\install.py
 ```
 
 The wizard sets up install type, data location, LMDB map size, and your
@@ -151,9 +153,19 @@ snippets for every detected client.
 
 Health check: `python -m memstore doctor`
 
+## Updates
+
+`python -m memstore update-check` tells you if a new version is out. A
+monthly background check (bundled with license validation, silent when
+offline) feeds the same hint into `doctor`. Nothing auto-installs: when an
+update is flagged, grab the new zip from
+[memstore.lemonsqueezy.com/billing](https://memstore.lemonsqueezy.com/billing),
+extract it over your install folder, and re-run `install.py` — your
+memories, config and license survive untouched.
+
 ## Pricing
 
-**$15 one-time. Lifetime license, all 5.x updates included.** Checkout and
+**$15 one-time. Lifetime license, all future updates included.** Checkout and
 license keys through Lemon Squeezy. Per-seat, use it on your own machines.
 
 <a href="https://memstore.lemonsqueezy.com"><img alt="Buy on Lemon Squeezy" src="https://img.shields.io/badge/Buy_%2415-memstore.lemonsqueezy.com-FFC233?style=for-the-badge"></a>
