@@ -60,19 +60,19 @@ numbers below are measured from artifacts in this machine's `benchmarks/results/
 not quoted from a marketing page. Competitor numbers are from their own
 published tables, linked in `benchmarks/COMPARISON.md` with dates.
 
-| Benchmark | MemStore | Mem0 (published) | Zep/Graphiti (published) |
+| Benchmark | MemStore | Mem0 (published) |
 |---|---|---|---|
-| LoCoMo — evidence hit@10, all 1,986 QA | **0.619** | 92.5 (full-stack acc) | — |
-| LoCoMo — median latency | **12.8 ms** | p50 0.88 s | — |
-| LoCoMo — tokens per query | **0** | ~6,956 | — |
-| BEAM (public 100K split) | **0.797** | — | — |
-| &nbsp;&nbsp;· instruction following | **1.000** | — | — |
-| &nbsp;&nbsp;· knowledge update | **0.950** | — | — |
-| &nbsp;&nbsp;· temporal reasoning | **0.925** | — | — |
-| &nbsp;&nbsp;· contradiction resolution | **0.750** | — | — |
-| Golden queries R@10 (52 verified, in-house) | **1.000** | — | — |
-| Median query latency (same box, vs my old neural stack) | **23 ms** | — | — |
-| Scale stress, 50k memories, p95 query | **4.1 ms** | — | — |
+| LoCoMo — evidence hit@10, all 1,986 QA | **0.619** | 92.5 (full-stack acc)
+| LoCoMo — median latency | **12.8 ms** | p50 0.88 s
+| LoCoMo — tokens per query | **0** | ~6,956
+| BEAM (public 100K split) | **0.797** | — |
+| &nbsp;&nbsp;· instruction following | **1.000** | — |
+| &nbsp;&nbsp;· knowledge update | **0.950** | — |
+| &nbsp;&nbsp;· temporal reasoning | **0.925** | — |
+| &nbsp;&nbsp;· contradiction resolution | **0.750** | — |
+| Golden queries R@10 (52 verified, in-house) | **1.000** | — |
+| Median query latency (same box, vs my old neural stack) | **23 ms** | — |
+| Scale stress, 50k memories, p95 query | **4.1 ms** | — |
 
 ### Why my LoCoMo number "looks low" next to Mem0's 92.5
 
