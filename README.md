@@ -61,7 +61,7 @@ not quoted from a marketing page. Competitor numbers are from their own
 published tables, linked in `benchmarks/COMPARISON.md` with dates.
 
 | Benchmark | MemStore | Mem0 (published) |
-|---|---|---|---|
+|---|---|---|
 | LoCoMo — evidence hit@10, all 1,986 QA | **0.619** | 92.5 (full-stack acc)
 | LoCoMo — median latency | **12.8 ms** | p50 0.88 s
 | LoCoMo — tokens per query | **0** | ~6,956
