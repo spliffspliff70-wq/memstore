@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>MemStore_v2 — Architecture</title>
+<style>
+body { margin:24px auto; max-width:1180px; padding:0 16px 60px; font-family:Segoe UI,Roboto,Arial,sans-serif;
+       background:#1e1e1e; color:#ddd; line-height:1.5; }
+h1 { color:#4ec9b0; margin-bottom:4px; }
+h2 { color:#9cdcfe; border-bottom:1px solid #333; padding-bottom:6px; margin-top:42px; }
+table { border-collapse:collapse; width:100%; margin:12px 0; font-size:13px; }
+th, td { border:1px solid #3c3c3c; padding:6px 10px; text-align:left; vertical-align:top; }
+th { background:#2d2d30; color:#4ec9b0; }
+td.key { color:#ce9178; white-space:nowrap; }
+code { background:#2d2d30; padding:1px 5px; border-radius:3px; color:#dcdcaa; }
+.note { color:#9aa5b1; font-size:13px; }
+.badge { display:inline-block; background:#2d2d30; border:1px solid #3c3c3c; border-radius:12px;
+         padding:2px 10px; font-size:12px; margin:2px; }
+svg { display:block; margin:10px auto; max-width:100%; }
+</style>
+</head>
+<body>
+<h1>MemStore_v2 — Architecture Map</h1>
+<p class="note">Fully model-free durable memory for agents: LMDB + Tantivy, no neural models, offline,
+startup &lt;1 s. This page is the visual companion to <code>docs/architecture.md</code>.</p>
+
+<h2>1 · Big picture — how data flows</h2>
+<svg width="1120" height="560" viewBox="0 0 1120 560" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="MemStore flow diagram">
+  <defs>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto" markerUnits="strokeWidth">
+      <path d="M0,0 L0,6 L9,3 z" fill="#888"/>
+    </marker>
+    <style>
+      .box { fill:#2d2d30; stroke-width:1.4; rx:6; }
+      .inp { stroke:#2e86de; } .proc { stroke:#4ec9b0; } .store { stroke:#dcdcaa; } .idx { stroke:#f39c12; }
+      .out { stroke:#10ac84; } .main { stroke:#c586c0; }
+      .lbl { fill:#ddd; font:13px 'Segoe UI',sans-serif; }
+      .hdr { fill:#fff; font:700 14px 'Segoe UI',sans-serif; }
+      .small { fill:#9aa5b1; font:11px 'Segoe UI',sans-serif; }
+      .edge { stroke:#888; stroke-width:1.6; fill:none; marker-end:url(#arrow); }
+      .dash { stroke-dasharray:5 4; }
+    </style>
+  </defs>
+
+  <!-- Inputs -->
+  <rect class="box inp" x="10" y="40" width="150" height="90" rx="6"/>
+  <text class="hdr" x="85" y="66" text-anchor="middle">INPUT</text>
+  <text class="small" x="85" y="88" text-anchor="middle">store / update</text>
+  <text class="small" x="85" y="104" text-anchor="middle">ingest (file, doc)</text>
+  <text class="small" x="85" y="120" text-anchor="middle">transcript · watcher</text>
+
+  <!-- Normalize -->
+  <rect class="box proc" x="215" y="40" width="180" height="90" rx="6"/>
+  <text class="hdr" x="305" y="66" text-anchor="middle">NORMALIZE</text>
+  <text class="small" x="305" y="88" text-anchor="middle">chunk (headings, overlap)</text>
+  <text class="small" x="305" y="104" text-anchor="middle">dates → valid_from/until</text>
+  <text class="small" x="305" y="120" text-anchor="middle">provenance · trust score</text>
+
+  <!-- Storage -->
+  <rect class="box store" x="462" y="40" width="210" height="90" rx="6"/>
+  <text class="hdr" x="567" y="66" text-anchor="middle">LMDB WRITE PATH</text>
+  <text class="small" x="567" y="88" text-anchor="middle">atomic id allocation</text>
+  <text class="small" x="567" y="104" text-anchor="middle">auto-link (shared tags)</text>
+  <text class="small" x="567" y="120" text-anchor="middle">tag/temporal/graph indices</text>
+
+  <!-- Index -->
+  <rect class="box idx" x="730" y="40" width="170" height="90" rx="6"/>
+  <text class="hdr" x="815" y="66" text-anchor="middle">FULL-TEXT INDEX</text>
+  <text class="small" x="815" y="88" text-anchor="middle">Tantivy (BM25 fallback)</text>
+  <text class="small" x="815" y="104" text-anchor="middle">MemStore-normalized</text>
+  <text class="small" x="815" y="120" text-anchor="middle">"terms" field</text>
+
+  <!-- Search path -->
+  <rect class="box out" x="945" y="40" width="165" height="90" rx="6"/>
+  <text class="hdr" x="1027" y="66" text-anchor="middle">SEARCH</text>
+  <text class="small" x="1027" y="88" text-anchor="middle">candidates ×50</text>
+  <text class="small" x="1027" y="104" text-anchor="middle">rerank · ordinal · trust</text>
+  <text class="small" x="1027" y="120" text-anchor="middle">budget + [ABSTAIN]</text>
+
+  <path class="edge" d="M160,85 L210,85"/>
+  <path class="edge" d="M395,85 L457,85"/>
+  <path class="edge" d="M672,85 L725,85"/>
+  <path class="edge" d="M900,85 L940,85"/>
+
+  <!-- Responses -->
+  <rect class="box out" x="945" y="195" width="165" height="80" rx="6"/>
+  <text class="hdr" x="1027" y="222" text-anchor="middle">RESPONSE</text>
+  <text class="small" x="1027" y="244" text-anchor="middle">records + CCR context</text>
+  <text class="small" x="1027" y="260" text-anchor="middle">sufficiency · [ref: mem_N]</text>
+  <path class="edge" d="M1027,130 L1027,192"/>
+
+  <!-- Evidence processor -->
+  <rect class="box proc" x="730" y="195" width="170" height="80" rx="6"/>
+  <text class="hdr" x="815" y="222" text-anchor="middle">EVIDENCE</text>
+  <text class="small" x="815" y="244" text-anchor="middle">dedup · contradictions</text>
+  <text class="small" x="815" y="260" text-anchor="middle">compression (4 strategies)</text>
+  <path class="edge" d="M900,235 L940,235"/>
+
+  <!-- Feedback loops -->
+  <rect class="box main" x="462" y="195" width="210" height="80" rx="6"/>
+  <text class="hdr" x="567" y="222" text-anchor="middle">LEARNING / MEMORY LIFE</text>
+  <text class="small" x="567" y="244" text-anchor="middle">EMA weights · feedback boosts</text>
+  <text class="small" x="567" y="260" text-anchor="middle">decay · quota · consolidation</text>
+  <path class="edge dash" d="M567,130 L567,192"/>
+  <path class="edge dash" d="M730,235 L677,235"/>
+  <path class="edge dash" d="M462,85 L267,85 L267,137" transform="translate(0 0)"/>
+
+  <!-- version graph -->
+  <rect class="box main" x="215" y="195" width="180" height="80" rx="6"/>
+  <text class="hdr" x="305" y="222" text-anchor="middle">VERSION GRAPH</text>
+  <text class="small" x="305" y="244" text-anchor="middle">snapshots · branches</text>
+  <text class="small" x="305" y="260" text-anchor="middle">3-way merge · diff</text>
+  <path class="edge dash" d="M305,137 L305,192"/>
+  <path class="edge dash" d="M462,85 L398,85 L398,192 L310,192" transform="translate(0 0)"/>
+
+  <!-- Legend -->
+  <rect x="10" y="330" width="690" height="200" fill="#252526" stroke="#3c3c3c" rx="8"/>
+  <text x="30" y="360" class="hdr">Legend</text>
+  <text x="30" y="385" class="lbl" fill="#2e86de">■ Input surfaces (store/update/ingest/transcript/watch)</text>
+  <text x="30" y="407" class="lbl" fill="#4ec9b0">■ Normalize + evidence pipeline (all rule-based)</text>
+  <text x="30" y="429" class="lbl" fill="#dcdcaa">■ LMDB (source of truth, 7 named sub-DBs)</text>
+  <text x="30" y="451" class="lbl" fill="#f39c12">■ Full-text index (MemStore-normalized terms field)</text>
+  <text x="30" y="473" class="lbl" fill="#10ac84">■ Search + response</text>
+  <text x="30" y="495" class="lbl" fill="#c586c0">■ Learning, lifecycle, version graph (dashed loops)</text>
+</svg>
+
+<h2>2 · The LMDB database map (per tenant, per branch)</h2>
+<table>
+<tr><th>Sub-DB</th><th>Key → Value</th><th>What it holds</th></tr>
+<tr><td class="key">memories</td><td>memory_id → msgpack MemoryRecord</td><td>Source of truth for every memory.</td></tr>
+<tr><td class="key">embeddings</td><td>memory_id → fp32 bytes</td><td>v1-import compat only; v2 retrieval never reads it.</td></tr>
+<tr><td class="key">graph_edges</td><td>memory_id → GraphEdge[] (dupsort)</td><td>Typed <code>related_to</code>/<code>contradicts</code> edges.</td></tr>
+<tr><td class="key">adjacency</td><td>memory_id → packed neighbor ids</td><td>Fast 1-hop graph expansion during search.</td></tr>
+<tr><td class="key">tag_index</td><td>tag → memory_id (dupsort)</td><td>Tag → records (auto-link, lookups, source reports).</td></tr>
+<tr><td class="key">indices</td><td><code>tt_&lt;ms&gt;</code>+id → memory_id</td><td>Creation-ordered temporal index (windows, "recent").</td></tr>
+<tr><td class="key">state</td><td>scalar keys</td><td>next_memory_id, schema_version, memory_count.</td></tr>
+</table>
+<p class="note">Full-text search lives next to each branch in <code>tenant_&lt;id&gt;_index/</code>
+(Tantivy): a MemStore-normalized <code>terms</code> field + stored content/tags/type/provenance/created_at.</p>
+
+<h2>3 · The MemoryRecord — every field, who writes it</h2>
+<table>
+<tr><th>Field</th><th>Set by</th><th>Meaning</th></tr>
+<tr><td class="key">memory_id / version_id</td><td>storage (atomic)</td><td>ID + bump per edit (reads don't bump).</td></tr>
+<tr><td class="key">content / memory_type / tags</td><td>caller (+auto-tags on ingest)</td><td>The fact and its category/category signals.</td></tr>
+<tr><td class="key">created_at</td><td>automatic (store time)</td><td>Insertion time.</td></tr>
+<tr><td class="key">valid_from / valid_until</td><td>automatic (temporal normalize) or caller</td><td><b>Event time</b>: extracted from content dates ("on 2026-03-15", "yesterday"), else = created_at. Drives ordinal queries (first/last) and temporal truth.</td></tr>
+<tr><td class="key">provenance</td><td>caller or inferred from source</td><td>document / conversation / api_response / user / inference / unknown.</td></tr>
+<tr><td class="key">confidence</td><td>caller / enricher</td><td>Claim confidence 0..1.</td></tr>
+<tr><td class="key">trust_score</td><td>TrustScorer at store time (+feedback)</td><td>Composite provenance+consistency+anomaly trust.</td></tr>
+<tr><td class="key">accessibility / access_count / last_accessed</td><td>lifecycle (decay) / access bump</td><td>Recency-weighted usefulness (drives eviction + frecency boost).</td></tr>
+<tr><td class="key">before/after_value</td><td>caller</td><td>State-change facts; fuels change-vs-change contradiction detection.</td></tr>
+<tr><td class="key">related / contradicts / source ids</td><td>caller + auto-link + detection</td><td>Graph edges (persisted with the record; reverse-deleted on delete).</td></tr>
+<tr><td class="key">protected</td><td>caller / type registry (constraint)</td><td>Immune to delete + never decays.</td></tr>
+</table>
+
+<h2>4 · Search, step by step</h2>
+<table>
+<tr><th>#</th><th>Stage</th><th>What happens</th></tr>
+<tr><td>1</td><td>mode classify</td><td>exact (identifiers) vs hybrid; "semantic" is honored as hybrid (no models).</td></tr>
+<tr><td>2</td><td>candidates</td><td>Tantivy/BM25 over the normalized <code>terms</code> field (k×5 docs, BM25 scoring).</td></tr>
+<tr><td>3</td><td>graph expand</td><td>&lt;20 candidates → 1-hop neighbors via adjacency.</td></tr>
+<tr><td>4</td><td>rerank</td><td>base ×(1+keyword+sparse learned) + (exact-phrase + tags + type)×(1+semantic learned) + recency(temporal) + frecency + trust − all offline heuristics. Ordinal intent ("first/last/earliest/latest") adds a corpus-relative event-time boost.</td></tr>
+<tr><td>5</td><td>metadata filters</td><td>Enforced after rerank so graph-boosted ids can't leak past tags/type/trust/time filters.</td></tr>
+<tr><td>6</td><td>fallback scan</td><td>Raw substring scan across stored text when the index returned nothing.</td></tr>
+<tr><td>7</td><td>evidence</td><td>Dedup (Jaccard ≥ 0.85), contradictions, timeline, confidence summary; 4-way compression into the budget-aware CCR context with <code>[ref: mem_N]</code> anchors.</td></tr>
+<tr><td>8</td><td>sufficiency</td><td>7 question types scored; below threshold → explicit <code>[ABSTAIN]</code>.</td></tr>
+<tr><td>9</td><td>response</td><td>Records + formatted_context + sufficiency metadata + usage counters; access counts bump without touching versions.</td></tr>
+</table>
+
+<h2>5 · Background subsystems & the INDEX layer</h2>
+<p>
+<span class="badge">event bus + sync scheduler — trust-gated agent→project commits (idempotent)</span>
+<span class="badge">lifecycle scheduler — decay, quota, consolidation</span>
+<span class="badge">file watcher — dir → live ingest</span>
+<span class="badge">eager tenant warmer — all DBs + indexes hot at startup</span>
+<span class="badge">EMA online weights + feedback boosts</span>
+</p>
+<table>
+<tr><th>Entry point</th><th>What you get</th></tr>
+<tr><td class="key">MCP protocol instructions (on connect)</td><td>Usage doctrine + a live one-page INDEX of all tenants (counts, types, tags).</td></tr>
+<tr><td class="key"><code>admin action=index</code></td><td>The book-INDEX across all tenants (or a deep catalog for one).</td></tr>
+<tr><td class="key"><code>admin action=source_report</code></td><td>One ingested document — exactly which chunks became which memories.</td></tr>
+<tr><td class="key"><code>python -m memstore viewer --tenant X</code></td><td>Offline force-directed HTML graph of a tenant's memories.</td></tr>
+<tr><td class="key"><code>python -m memstore doctor</code></td><td>Environment health checks.</td></tr>
+</table>
+
+<p class="note">Generated from the MemStore_v2 source of truth (memstore/*). Keep it next to
+<code>docs/architecture.md</code>; update both when the pipeline changes.</p>
+</body>
+</html>
