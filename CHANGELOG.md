@@ -5,12 +5,7 @@
 - dmin action=toc rebuilds a document's Table of Contents from stored
   heading tags; search results now show the section each hit lives in, and
   a search can be scoped to one section with `tags=["heading:…"]`.
-- `admin action=reindex` rebuilds the full-text index on demand (analyzer
-  upgrades, duplicate-doc cleanup); punctuation identifiers like `factory-cleanup.py`
-  now index as exact terms, and rare identifiers are amplified query-side
-  for stronger exact-match retrieval.
-
-## 1.0.0 - 2026-09-21 refresh (same version, corrected build)
+-## 1.0.0 - 2026-09-21 refresh (same version, corrected build)
 
 - Fixed installs where updates silently did not apply (a stale package copy
   in site-packages was shadowing the editable install).
