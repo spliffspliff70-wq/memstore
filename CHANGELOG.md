@@ -1,6 +1,16 @@
 # Changelog
 
-## 1.0.0 — 2026-08-31 (public launch)
+## 1.0.0 - 2026-09-21 refresh (same version, corrected build)
+
+- Fixed installs where updates silently did not apply (a stale package copy
+  in site-packages was shadowing the editable install).
+- LMDB map sizing corrected: new databases start at 64 MB instead of 48 GB
+  preallocation, existing files map exactly their own size (never re-inflate
+  on reopen), and multi-process resizing reconciles automatically.
+- Installer now writes the engine's growth-tuning config values so they
+  actually take effect.
+
+## 1.0.0 - 2026-08-31 (public launch)
 
 First public release of MemStore: durable, private memory for AI agents —
 fully offline, no models, no embeddings, no cloud.
@@ -22,9 +32,6 @@ fully offline, no models, no embeddings, no cloud.
   silent re-validation, offline fallback; updates never burn activation
   slots.
 - **Memory River** — a local dashboard to browse what your agents remember.
-- **Benchmarks** — comparison harnesses are in the pipeline for the public
-  repo; run the product's own `doctor` and smoke tests on your machine
-  before committing.
 
 ### Notes
 
